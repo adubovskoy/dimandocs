@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Title}}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: #f8f9fa; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
+        .directory-group { margin-bottom: 40px; }
+        .directory-header { background: #007bff; color: white; padding: 15px; border-radius: 8px 8px 0 0; margin-bottom: 0; }
+        .directory-header h2 { margin: 0; font-size: 1.5em; }
+        .nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; padding: 20px; background: #f8f9fa; border-radius: 0 0 8px 8px; }
+        .nav-item { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; transition: box-shadow 0.3s; }
+        .nav-item:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .nav-item a { text-decoration: none; color: #333; }
+        .nav-item h3 { margin: 0 0 10px 0; color: #007bff; }
+        .nav-item p { margin: 0; color: #666; font-size: 14px; }
+        .nav-item .overview { margin: 10px 0 0 0; color: #555; font-size: 13px; font-style: regular; line-height: 1.4; }
+        .total-count { color: #666; font-size: 0.9em; }
+        .total-count-inner { color: #ccc; font-size: 0.8em; font-weight: normal; }
+        .search-box { margin-top: 20px; }
+        .search-input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #dee2e6; border-radius: 8px; box-sizing: border-box; transition: border-color 0.3s; }
+        .search-input:focus { outline: none; border-color: #007bff; }
+        .search-results-info { margin-top: 10px; color: #666; font-size: 0.9em; }
+        .hidden { display: none; }
+        .highlight { background-color: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{.Title}}</h1>
+            <p class="total-count">Documentation Browser - <span id="doc-count">{{.TotalDocuments}}</span> documents found across {{len .Groups}} directories</p>
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" placeholder="Search across all documents...">
+                <div id="search-results-info" class="search-results-info hidden"></div>
+            </div>
+        </div>
+        {{range .Groups}}
+        <div class="directory-group">
+            <div class="directory-header">
+                <h2>{{.Name}} <span class="total-count-inner">({{len .Documents}} documents)</span></h2>
+            </div>
+            <div class="nav">
+                {{range .Documents}}
+                <div class="nav-item">
+                    <a href="/doc/{{.RelPath}}">
+                        <h3>{{.DirName}}</h3>
+                        <p>{{.AbsPath}}</p>
+                        {{if .Overview}}
+                        <p class="overview">{{.Overview}}</p>
+                        {{end}}
+                    </a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+    <script>
+        // Store original documents for resetting search
+        const allDocuments = Array.from(document.querySelectorAll('.nav-item'));
+        const allGroups = Array.from(document.querySelectorAll('.directory-group'));
+        const searchInput = document.getElementById('search-input');
+        const searchResultsInfo = document.getElementById('search-results-info');
+        const docCount = document.getElementById('doc-count');
+        let searchTimeout;
+
+        // Debounce search to avoid too many API calls
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performSearch(this.value.trim());
+            }, 300);
+        });
+
+        async function performSearch(query) {
+            if (!query) {
+                // Show all documents
+                allGroups.forEach(group => group.classList.remove('hidden'));
+                allDocuments.forEach(doc => doc.classList.remove('hidden'));
+                searchResultsInfo.classList.add('hidden');
+                docCount.textContent = allDocuments.length;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+
+                // Hide all documents first
+                allDocuments.forEach(doc => doc.classList.add('hidden'));
+                allGroups.forEach(group => group.classList.add('hidden'));
+
+                if (results.length === 0) {
+                    searchResultsInfo.textContent = 'No documents found';
+                    searchResultsInfo.classList.remove('hidden');
+                    docCount.textContent = '0';
+                    return;
+                }
+
+                // Show only matching documents
+                const matchingPaths = new Set(results.map(doc => doc.RelPath));
+                const visibleGroups = new Set();
+
+                allDocuments.forEach(docElement => {
+                    const link = docElement.querySelector('a');
+                    if (link) {
+                        const href = link.getAttribute('href');
+                        const relPath = href.replace('/doc/', '');
+                        if (matchingPaths.has(relPath)) {
+                            docElement.classList.remove('hidden');
+                            // Find and show the parent group
+                            const parentGroup = docElement.closest('.directory-group');
+                            if (parentGroup) {
+                                visibleGroups.add(parentGroup);
+                            }
+                        }
+                    }
+                });
+
+                // Show groups that have visible documents
+                visibleGroups.forEach(group => group.classList.remove('hidden'));
+
+                searchResultsInfo.textContent = `Found ${results.length} matching document${results.length !== 1 ? 's' : ''}`;
+                searchResultsInfo.classList.remove('hidden');
+                docCount.textContent = results.length;
+            } catch (error) {
+                console.error('Search failed:', error);
+                searchResultsInfo.textContent = 'Search failed. Please try again.';
+                searchResultsInfo.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

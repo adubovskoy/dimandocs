@@ -1,0 +1,23 @@
+{
+  "directories": [
+    {
+      "path": "./docs/ADRs",
+      "name": "Architecture Decision Records",
+      "file_pattern": "\\.md$"
+    },
+    {
+      "path": "./src/modules",
+      "name": "Modules",
+      "file_pattern": "^(?i)(readme\\.md)$"
+    }
+  ],
+  "port": "8090",
+  "title": "Documentation Browser",
+  "ignore_patterns": [
+    ".*/node_modules/.*",
+    ".*/\\.git/.*",
+    ".*/vendor/.*",
+    ".*/build/.*",
+    ".*/dist/.*"
+  ]
+}

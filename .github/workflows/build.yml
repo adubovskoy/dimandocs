@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Display Go version
+        run: go version
+
+      - name: Download dependencies
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Set build variables
+        id: vars
+        run: |
+          echo "BUILD_VERSION=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')" >> $GITHUB_OUTPUT
+
+      - name: Build Linux AMD64
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o dimandocs-linux-amd64 \
+            -ldflags="-s -w -X main.Version=${{ steps.vars.outputs.BUILD_VERSION }} -X main.BuildTime=${{ steps.vars.outputs.BUILD_TIME }}" \
+            .
+
+      - name: Build macOS ARM64
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o dimandocs-macos-arm64 \
+            -ldflags="-s -w -X main.Version=${{ steps.vars.outputs.BUILD_VERSION }} -X main.BuildTime=${{ steps.vars.outputs.BUILD_TIME }}" \
+            .
+
+      - name: Build macOS AMD64
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o dimandocs-macos-amd64 \
+            -ldflags="-s -w -X main.Version=${{ steps.vars.outputs.BUILD_VERSION }} -X main.BuildTime=${{ steps.vars.outputs.BUILD_TIME }}" \
+            .
+
+      - name: Build Windows AMD64
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o dimandocs-windows-amd64.exe \
+            -ldflags="-s -w -X main.Version=${{ steps.vars.outputs.BUILD_VERSION }} -X main.BuildTime=${{ steps.vars.outputs.BUILD_TIME }}" \
+            .
+
+      - name: Display build info
+        run: |
+          ls -lh dimandocs-*
+          ./dimandocs-linux-amd64 -version
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dimandocs-linux-amd64
+            dimandocs-macos-arm64
+            dimandocs-macos-amd64
+            dimandocs-windows-amd64.exe
+            dimandocs.json
+            README.md

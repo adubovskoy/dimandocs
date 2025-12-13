@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{.Title}} - {{.AppTitle}}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; line-height: 1.6; }
+        .page-wrapper { display: flex; max-width: 1400px; margin: 0 auto; padding: 20px; gap: 20px; }
+        .toc-sidebar { width: 280px; flex-shrink: 0; position: sticky; top: 20px; align-self: flex-start; max-height: calc(100vh - 40px); overflow-y: auto; }
+        .toc-container { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; }
+        .toc-title { font-weight: bold; font-size: 16px; margin: 0 0 15px 0; color: #333; }
+        .toc-nav { list-style: none; padding: 0; margin: 0; }
+        .toc-nav li { margin: 0; }
+        .toc-nav a { display: block; padding: 4px 0; color: #666; text-decoration: none; font-size: 14px; line-height: 1.4; transition: color 0.2s; }
+        .toc-nav a:hover { color: #007bff; }
+        .toc-nav a.active { color: #007bff; font-weight: 600; }
+        .toc-nav .toc-h1 { font-size: 15px; font-weight: 600; margin-top: 10px; }
+        .toc-nav .toc-h2 { padding-left: 0; font-weight: 500; margin-top: 8px; }
+        .toc-nav .toc-h3 { padding-left: 15px; font-size: 13px; }
+        .toc-nav .toc-h4 { padding-left: 30px; font-size: 12px; color: #888; }
+        .main-content { flex: 1; min-width: 0; }
+        .header { background: #f8f9fa; padding: 15px; margin-bottom: 30px; border-radius: 8px; }
+        .header a { color: #007bff; text-decoration: none; }
+        .header a:hover { text-decoration: underline; }
+        .header p { margin: 10px 0 5px 0; font-weight: 500; }
+        .header small { color: #666; font-size: 12px; }
+        .content { background: white; padding: 30px; border: 1px solid #dee2e6; border-radius: 8px; }
+        .content h1, .content h2, .content h3, .content h4 { color: #333; scroll-margin-top: 20px; }
+        .content h1 { border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .content pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .content code { background: #f8f9fa; border-radius: 3px; padding: 2px 5px; }
+        .content pre code { padding: 0; }
+        .content blockquote { border-left: 4px solid #007bff; padding-left: 20px; margin: 20px 0; color: #666; }
+        .content table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .content th, .content td { border: 1px solid #dee2e6; padding: 8px 12px; text-align: left; }
+        .content th { background: #f8f9fa; }
+
+        @media (max-width: 1024px) {
+            .page-wrapper { flex-direction: column; }
+            .toc-sidebar { width: 100%; position: static; max-height: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <aside class="toc-sidebar">
+            <nav class="toc-container">
+                <div class="toc-title">Table of Contents</div>
+                <ul class="toc-nav" id="toc-nav"></ul>
+            </nav>
+        </aside>
+
+        <div class="main-content">
+            <div class="header">
+                <a href="/">← Back to Documentation</a>
+                <p>{{.DirName}}</p>
+                <small>{{.AbsPath}}</small>
+            </div>
+            <div class="content" id="document-content">
+                {{.Content}}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate Table of Contents
+        (function() {
+            const content = document.getElementById('document-content');
+            const tocNav = document.getElementById('toc-nav');
+
+            // Find all headers H1-H4
+            const headers = content.querySelectorAll('h1, h2, h3, h4');
+
+            if (headers.length === 0) {
+                document.querySelector('.toc-sidebar').style.display = 'none';
+                return;
+            }
+
+            // Generate IDs and TOC items
+            headers.forEach((header, index) => {
+                // Generate ID if not present
+                if (!header.id) {
+                    const text = header.textContent.trim();
+                    const id = 'heading-' + text
+                        .toLowerCase()
+                        .replace(/[^\w\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .replace(/-+/g, '-')
+                        .substring(0, 50) + '-' + index;
+                    header.id = id;
+                }
+
+                // Create TOC item
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '#' + header.id;
+                a.textContent = header.textContent.trim();
+                a.className = 'toc-' + header.tagName.toLowerCase();
+
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = document.getElementById(header.id);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        history.pushState(null, null, '#' + header.id);
+                    }
+                });
+
+                li.appendChild(a);
+                tocNav.appendChild(li);
+            });
+
+            // Active link highlighting on scroll
+            let ticking = false;
+
+            function updateActiveLink() {
+                const scrollPosition = window.scrollY + 100;
+
+                let currentHeader = null;
+                headers.forEach(header => {
+                    const rect = header.getBoundingClientRect();
+                    const headerTop = window.scrollY + rect.top;
+
+                    if (headerTop <= scrollPosition) {
+                        currentHeader = header;
+                    }
+                });
+
+                // Remove all active classes
+                document.querySelectorAll('.toc-nav a').forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                // Add active class to current header
+                if (currentHeader) {
+                    const activeLink = document.querySelector('.toc-nav a[href="#' + currentHeader.id + '"]');
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                    }
+                }
+
+                ticking = false;
+            }
+
+            function onScroll() {
+                if (!ticking) {
+                    window.requestAnimationFrame(updateActiveLink);
+                    ticking = true;
+                }
+            }
+
+            window.addEventListener('scroll', onScroll);
+
+            // Initial update
+            updateActiveLink();
+
+            // Handle hash on page load
+            if (window.location.hash) {
+                setTimeout(() => {
+                    const target = document.querySelector(window.location.hash);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        })();
+    </script>
+</body>
+</html>
