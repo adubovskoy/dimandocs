@@ -21,17 +21,15 @@ A lightweight web-based documentation browser for markdown files. DimanDocs scan
 
 ### Option 1: Download Pre-built Binary (Recommended)
 
-Download the latest build artifact from Bitbucket Pipelines:
+Download the latest release from GitHub:
 
-1. Go to your repository → Pipelines
-2. Find the latest successful build
-3. Download the `artifacts` folder
-4. Extract and run `./dimandocs`
+1. Go to [Releases](https://github.com/adubovskoy/dimandocs/releases)
+2. Download the binary for your platform
+3. Extract and run `./dimandocs`
 
 **Available Platforms**:
-- Linux AMD64 (default)
-- macOS Intel (`dimandocs-darwin-amd64`)
-- macOS Apple Silicon (`dimandocs-darwin-arm64`)
+- Linux AMD64 (`dimandocs-linux-amd64`)
+- macOS Apple Silicon (`dimandocs-macos-arm64`)
 - Windows AMD64 (`dimandocs-windows-amd64.exe`)
 
 ### Option 2: Build from Source
