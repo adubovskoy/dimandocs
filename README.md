@@ -130,12 +130,14 @@ Configuration for semantic search and MCP server:
   "embeddings": {
     "enabled": true,
     "provider": "openai",
-    "model": "text-embedding-3-large",
-    "api_key": "${OPENAI_API_KEY}",
-    "db_path": "embeddings.db"
+    "model": "text-embedding-3-large"
   }
 }
 ```
+
+Optional fields:
+- `api_key` - API key (auto-detected from env if omitted)
+- `db_path` - Path to SQLite database (default: `embeddings.db`)
 
 **Supported providers:**
 
