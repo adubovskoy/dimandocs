@@ -43,11 +43,7 @@ jobs:
             goos: linux
             goarch: amd64
             artifact: dimandocs-linux-amd64
-          - os: macos-13
-            goos: darwin
-            goarch: amd64
-            artifact: dimandocs-macos-amd64
-          - os: macos-14
+          - os: macos-latest
             goos: darwin
             goarch: arm64
             artifact: dimandocs-macos-arm64
@@ -120,7 +116,6 @@ jobs:
         run: |
           mkdir -p release
           cp artifacts/dimandocs-linux-amd64/dimandocs-linux-amd64 release/
-          cp artifacts/dimandocs-macos-amd64/dimandocs-macos-amd64 release/
           cp artifacts/dimandocs-macos-arm64/dimandocs-macos-arm64 release/
           cp artifacts/dimandocs-windows-amd64.exe/dimandocs-windows-amd64.exe release/
           cp dimandocs.json release/
@@ -134,7 +129,6 @@ jobs:
           files: |
             release/dimandocs-linux-amd64
             release/dimandocs-macos-arm64
-            release/dimandocs-macos-amd64
             release/dimandocs-windows-amd64.exe
             release/dimandocs.json
             release/README.md
