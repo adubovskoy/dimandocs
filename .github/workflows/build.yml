@@ -74,8 +74,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $sqliteVersion = "3480000"
-          $url = "https://www.sqlite.org/2024/sqlite-amalgamation-$sqliteVersion.zip"
+          $sqliteVersion = "3510200"
+          $url = "https://sqlite.org/2026/sqlite-amalgamation-$sqliteVersion.zip"
           Invoke-WebRequest -Uri $url -OutFile sqlite.zip
           Expand-Archive sqlite.zip -DestinationPath sqlite
           $sqliteDir = "sqlite/sqlite-amalgamation-$sqliteVersion"
