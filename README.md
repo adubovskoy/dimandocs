@@ -14,6 +14,8 @@ A lightweight web-based documentation browser for markdown files. DimanDocs scan
 - **Ignore patterns**: Exclude unwanted directories (node_modules, .git, etc.)
 - **Responsive UI**: Clean grid layout with hover effects
 - **Markdown rendering**: Full markdown support using Blackfriday
+- **MCP Server**: Chat with your documentation using Claude via Model Context Protocol
+- **Semantic Search**: Vector-based search using OpenAI, Voyage AI, or Ollama embeddings
 
 ## Quick Start
 
@@ -121,6 +123,241 @@ Regex patterns for paths to ignore during scanning. Common patterns:
 - `.*/vendor/.*` - Vendor dependencies
 - `.*/build/.*` - Build outputs
 - `.*/dist/.*` - Distribution files
+
+#### embeddings (object, optional)
+Configuration for semantic search and MCP server:
+
+```json
+{
+  "embeddings": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "text-embedding-3-large",
+    "api_key": "${OPENAI_API_KEY}",
+    "db_path": "embeddings.db"
+  }
+}
+```
+
+**Supported providers:**
+
+| Provider | `provider` value | API Key Env Var | Models |
+|----------|-----------------|-----------------|--------|
+| OpenAI | `openai` | `OPENAI_API_KEY` | `text-embedding-3-large` (3072d), `text-embedding-3-small` (1536d) |
+| Voyage AI | `voyage` | `VOYAGE_API_KEY` | `voyage-3` (1024d), `voyage-code-3` (1024d), `voyage-3-lite` (512d) |
+| Ollama | `ollama` | not required | `nomic-embed-text` (768d), `mxbai-embed-large` (1024d) |
+
+#### mcp (object, optional)
+MCP server configuration:
+
+```json
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "stdio"
+  }
+}
+```
+
+## MCP Integration (Chat with Documentation)
+
+DimanDocs includes an MCP (Model Context Protocol) server that allows Claude to search and read your documentation.
+
+### Configuration Locations
+
+| Application | Config File Location |
+|-------------|---------------------|
+| Claude CLI (global) | `~/.claude/settings.json` |
+| Claude CLI (project) | `<project>/.claude/settings.json` or `<project>/.mcp.json` |
+| Claude Desktop (Linux) | `~/.config/claude-desktop/config.json` |
+| Claude Desktop (macOS) | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+
+### Provider Setup Examples
+
+#### OpenAI (Recommended for quality)
+
+**dimandocs.json:**
+```json
+{
+  "directories": [...],
+  "embeddings": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "text-embedding-3-large",
+    "db_path": "embeddings.db"
+  },
+  "mcp": {
+    "enabled": true,
+    "transport": "stdio"
+  }
+}
+```
+
+**Claude CLI/Desktop config:**
+```json
+{
+  "mcpServers": {
+    "dimandocs": {
+      "command": "/path/to/dimandocs",
+      "args": ["--mcp", "/path/to/dimandocs.json"],
+      "env": {
+        "OPENAI_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+**Available models:**
+- `text-embedding-3-large` - 3072 dimensions, best quality
+- `text-embedding-3-small` - 1536 dimensions, faster & cheaper
+
+---
+
+#### Voyage AI (Recommended for code)
+
+**dimandocs.json:**
+```json
+{
+  "directories": [...],
+  "embeddings": {
+    "enabled": true,
+    "provider": "voyage",
+    "model": "voyage-3",
+    "db_path": "embeddings.db"
+  },
+  "mcp": {
+    "enabled": true,
+    "transport": "stdio"
+  }
+}
+```
+
+**Claude CLI/Desktop config:**
+```json
+{
+  "mcpServers": {
+    "dimandocs": {
+      "command": "/path/to/dimandocs",
+      "args": ["--mcp", "/path/to/dimandocs.json"],
+      "env": {
+        "VOYAGE_API_KEY": "pa-..."
+      }
+    }
+  }
+}
+```
+
+**Available models:**
+- `voyage-3` - 1024 dimensions, general purpose
+- `voyage-code-3` - 1024 dimensions, optimized for code
+- `voyage-3-lite` - 512 dimensions, faster & cheaper
+
+---
+
+#### Ollama (Free, Local, No API key)
+
+1. **Install Ollama:**
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull nomic-embed-text
+   ```
+
+2. **dimandocs.json:**
+   ```json
+   {
+     "directories": [...],
+     "embeddings": {
+       "enabled": true,
+       "provider": "ollama",
+       "model": "nomic-embed-text",
+       "db_path": "embeddings.db"
+     },
+     "mcp": {
+       "enabled": true,
+       "transport": "stdio"
+     }
+   }
+   ```
+
+3. **Claude CLI/Desktop config (no env needed):**
+   ```json
+   {
+     "mcpServers": {
+       "dimandocs": {
+         "command": "/path/to/dimandocs",
+         "args": ["--mcp", "/path/to/dimandocs.json"]
+       }
+     }
+   }
+   ```
+
+**Available models:**
+- `nomic-embed-text` - 768 dimensions, general purpose
+- `mxbai-embed-large` - 1024 dimensions, higher quality
+
+---
+
+### Project-Specific MCP Configuration
+
+To add MCP only for a specific project, create `.claude/settings.json` or `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "my-project-docs": {
+      "command": "/path/to/dimandocs",
+      "args": ["--mcp", "/path/to/project/dimandocs.json"],
+      "env": {
+        "VOYAGE_API_KEY": "pa-..."
+      }
+    }
+  }
+}
+```
+
+Then run `claude` from your project directory - the MCP server will be available only in that project.
+
+### MCP Tools Available
+
+Once configured, Claude can use these tools:
+
+| Tool | Description |
+|------|-------------|
+| `search_docs` | Semantic search across all documentation |
+| `get_document` | Get full content of a specific document |
+| `list_documents` | List all available documents |
+
+### Running MCP Server Standalone
+
+```bash
+# Run as MCP server only (for Claude CLI/Desktop)
+./dimandocs --mcp dimandocs.json
+
+# Run web server with embeddings (normal mode)
+./dimandocs dimandocs.json
+```
+
+### Indexing Documents
+
+Use the `index` command to pre-index documents before using MCP:
+
+```bash
+# Index documents (skips unchanged)
+./dimandocs index dimandocs.json
+
+# Force re-index all documents
+./dimandocs index --force dimandocs.json
+
+# Show help
+./dimandocs index --help
+```
+
+**When to use `index`:**
+- Before first MCP use to pre-build the search index
+- After adding many new documents
+- After changing embedding provider (dimension change triggers automatic re-index)
+- With `--force` to rebuild index from scratch
 
 ## How It Works
 

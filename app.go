@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -277,30 +278,109 @@ func (a *App) handleAPIDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// SearchResult represents a search result with optional score
+type SearchResultJSON struct {
+	Document
+	Score       float32 `json:"Score,omitempty"`
+	ChunkText   string  `json:"ChunkText,omitempty"`
+	SectionTitle string `json:"SectionTitle,omitempty"`
+	IsVectorSearch bool `json:"IsVectorSearch"`
+}
+
 // handleSearch handles search API requests
 func (a *App) handleSearch(w http.ResponseWriter, r *http.Request) {
-	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 
 	if query == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]Document{})
+		json.NewEncoder(w).Encode([]SearchResultJSON{})
 		return
 	}
 
-	var results []Document
-	for _, doc := range a.Documents {
-		// Search in title, content, and overview (case-insensitive)
-		if strings.Contains(strings.ToLower(doc.Title), query) ||
-			strings.Contains(strings.ToLower(doc.Content), query) ||
-			strings.Contains(strings.ToLower(doc.Overview), query) {
-			results = append(results, doc)
+	// Try vector search first if embedding manager is available
+	if a.EmbeddingManager != nil && a.EmbeddingManager.IsEnabled() {
+		results, err := a.vectorSearch(query)
+		if err != nil {
+			log.Printf("Vector search failed, falling back to text search: %v", err)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(results); err != nil {
+				http.Error(w, fmt.Sprintf("Failed to encode results: %v", err), http.StatusInternalServerError)
+			}
+			return
 		}
 	}
+
+	// Fallback to text search
+	results := a.textSearch(query)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(results); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to encode results: %v", err), http.StatusInternalServerError)
 	}
+}
+
+// vectorSearch performs semantic search using embeddings
+func (a *App) vectorSearch(query string) ([]SearchResultJSON, error) {
+	ctx := context.Background()
+	results, err := a.EmbeddingManager.Search(ctx, query, 20)
+	if err != nil {
+		return nil, err
+	}
+
+	var searchResults []SearchResultJSON
+	seenDocs := make(map[string]bool)
+
+	for _, r := range results {
+		// Find the full document
+		var doc *Document
+		for i := range a.Documents {
+			if a.Documents[i].RelPath == r.Document.Path {
+				doc = &a.Documents[i]
+				break
+			}
+		}
+
+		if doc == nil {
+			continue
+		}
+
+		// Deduplicate by document path, keeping highest score
+		if seenDocs[doc.RelPath] {
+			continue
+		}
+		seenDocs[doc.RelPath] = true
+
+		searchResults = append(searchResults, SearchResultJSON{
+			Document:      *doc,
+			Score:         r.Score,
+			ChunkText:     r.Chunk.ChunkText,
+			SectionTitle:  r.Chunk.SectionTitle,
+			IsVectorSearch: true,
+		})
+	}
+
+	return searchResults, nil
+}
+
+// textSearch performs traditional text-based search
+func (a *App) textSearch(query string) []SearchResultJSON {
+	queryLower := strings.ToLower(query)
+	var results []SearchResultJSON
+
+	for _, doc := range a.Documents {
+		// Search in title, content, and overview (case-insensitive)
+		if strings.Contains(strings.ToLower(doc.Title), queryLower) ||
+			strings.Contains(strings.ToLower(doc.Content), queryLower) ||
+			strings.Contains(strings.ToLower(doc.Overview), queryLower) {
+			results = append(results, SearchResultJSON{
+				Document:      doc,
+				IsVectorSearch: false,
+			})
+		}
+	}
+
+	return results
 }
 
 // handleSPA serves the frontend SPA

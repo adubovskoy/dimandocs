@@ -19,5 +19,16 @@
     ".*/vendor/.*",
     ".*/build/.*",
     ".*/dist/.*"
-  ]
+  ],
+  "embeddings": {
+    "enabled": true,
+    "provider": "openai",
+    "model": "text-embedding-3-large",
+    "api_key": "${OPENAI_API_KEY}",
+    "db_path": "embeddings.db"
+  },
+  "mcp": {
+    "enabled": true,
+    "transport": "stdio"
+  }
 }
