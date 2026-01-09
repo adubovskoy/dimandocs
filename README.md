@@ -30,7 +30,8 @@ Download the latest release from GitHub:
 **Available Platforms**:
 - Linux AMD64 (`dimandocs-linux-amd64`)
 - macOS Apple Silicon (`dimandocs-macos-arm64`)
-- Windows AMD64 (`dimandocs-windows-amd64.exe`)
+
+*Note: Windows builds are not available due to sqlite-vec CGO linking conflicts. Build from source on Windows if needed.*
 
 ### Option 2: Build from Source
 

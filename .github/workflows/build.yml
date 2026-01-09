@@ -47,10 +47,9 @@ jobs:
             goos: darwin
             goarch: arm64
             artifact: dimandocs-macos-arm64
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            artifact: dimandocs-windows-amd64.exe
+          # Windows build disabled due to sqlite-vec CGO linking conflicts
+          # Both mattn/go-sqlite3 and sqlite-vec-go-bindings bundle sqlite3.c
+          # causing duplicate symbol errors at link time
 
     runs-on: ${{ matrix.os }}
 
@@ -74,18 +73,6 @@ jobs:
         run: |
           go mod download
           go mod verify
-
-      - name: Install SQLite headers (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $sqliteVersion = "3510200"
-          $url = "https://sqlite.org/2026/sqlite-amalgamation-$sqliteVersion.zip"
-          Invoke-WebRequest -Uri $url -OutFile sqlite.zip
-          Expand-Archive sqlite.zip -DestinationPath sqlite
-          $sqliteDir = "sqlite/sqlite-amalgamation-$sqliteVersion"
-          Copy-Item "$sqliteDir/sqlite3.h" -Destination "$env:USERPROFILE\go\pkg\mod\github.com\asg017\sqlite-vec-go-bindings@v0.1.6\cgo\"
-          Copy-Item "$sqliteDir/sqlite3.c" -Destination "$env:USERPROFILE\go\pkg\mod\github.com\asg017\sqlite-vec-go-bindings@v0.1.6\cgo\"
 
       - name: Set build variables
         id: vars
@@ -129,7 +116,6 @@ jobs:
           mkdir -p release
           cp artifacts/dimandocs-linux-amd64/dimandocs-linux-amd64 release/
           cp artifacts/dimandocs-macos-arm64/dimandocs-macos-arm64 release/
-          cp artifacts/dimandocs-windows-amd64.exe/dimandocs-windows-amd64.exe release/
           cp dimandocs.json release/
           cp README.md release/
           ls -lh release/
@@ -141,6 +127,5 @@ jobs:
           files: |
             release/dimandocs-linux-amd64
             release/dimandocs-macos-arm64
-            release/dimandocs-windows-amd64.exe
             release/dimandocs.json
             release/README.md
