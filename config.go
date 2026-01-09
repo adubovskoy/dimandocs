@@ -40,6 +40,11 @@ func (a *App) LoadConfig(configFile string) error {
 		a.Config.Embeddings.Model = "text-embedding-3-large"
 	}
 
+	// Auto-detect API key from environment if not specified
+	if a.Config.Embeddings.APIKey == "" {
+		a.Config.Embeddings.APIKey = getDefaultAPIKey(a.Config.Embeddings.Provider)
+	}
+
 	// Set defaults for MCP
 	if a.Config.MCP.Transport == "" {
 		a.Config.MCP.Transport = "stdio"
@@ -101,4 +106,18 @@ func expandEnvVars(s string) string {
 	}
 
 	return result
+}
+
+// getDefaultAPIKey returns the default environment variable for a provider
+func getDefaultAPIKey(provider string) string {
+	switch strings.ToLower(provider) {
+	case "openai":
+		return os.Getenv("OPENAI_API_KEY")
+	case "voyage", "voyageai":
+		return os.Getenv("VOYAGE_API_KEY")
+	case "ollama":
+		return "" // Ollama doesn't need API key
+	default:
+		return ""
+	}
 }

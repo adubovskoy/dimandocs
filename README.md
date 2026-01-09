@@ -147,6 +147,8 @@ Configuration for semantic search and MCP server:
 | Voyage AI | `voyage` | `VOYAGE_API_KEY` | `voyage-3` (1024d), `voyage-code-3` (1024d), `voyage-3-lite` (512d) |
 | Ollama | `ollama` | not required | `nomic-embed-text` (768d), `mxbai-embed-large` (1024d) |
 
+**API Key auto-detection:** If `api_key` is not specified in config, DimanDocs automatically reads from the standard environment variable based on provider (`OPENAI_API_KEY`, `VOYAGE_API_KEY`). This means you can omit `api_key` from `dimandocs.json` entirely.
+
 #### mcp (object, optional)
 MCP server configuration:
 
@@ -176,20 +178,16 @@ DimanDocs includes an MCP (Model Context Protocol) server that allows Claude to 
 
 #### OpenAI (Recommended for quality)
 
-**dimandocs.json:**
+**dimandocs.json** (no api_key needed - auto-detected from env):
 ```json
 {
   "directories": [...],
   "embeddings": {
     "enabled": true,
     "provider": "openai",
-    "model": "text-embedding-3-large",
-    "db_path": "embeddings.db"
+    "model": "text-embedding-3-large"
   },
-  "mcp": {
-    "enabled": true,
-    "transport": "stdio"
-  }
+  "mcp": { "enabled": true }
 }
 ```
 
@@ -200,9 +198,7 @@ DimanDocs includes an MCP (Model Context Protocol) server that allows Claude to 
     "dimandocs": {
       "command": "/path/to/dimandocs",
       "args": ["--mcp", "/path/to/dimandocs.json"],
-      "env": {
-        "OPENAI_API_KEY": "sk-..."
-      }
+      "env": { "OPENAI_API_KEY": "sk-..." }
     }
   }
 }
@@ -216,20 +212,16 @@ DimanDocs includes an MCP (Model Context Protocol) server that allows Claude to 
 
 #### Voyage AI (Recommended for code)
 
-**dimandocs.json:**
+**dimandocs.json** (no api_key needed - auto-detected from env):
 ```json
 {
   "directories": [...],
   "embeddings": {
     "enabled": true,
     "provider": "voyage",
-    "model": "voyage-3",
-    "db_path": "embeddings.db"
+    "model": "voyage-3"
   },
-  "mcp": {
-    "enabled": true,
-    "transport": "stdio"
-  }
+  "mcp": { "enabled": true }
 }
 ```
 
@@ -240,9 +232,7 @@ DimanDocs includes an MCP (Model Context Protocol) server that allows Claude to 
     "dimandocs": {
       "command": "/path/to/dimandocs",
       "args": ["--mcp", "/path/to/dimandocs.json"],
-      "env": {
-        "VOYAGE_API_KEY": "pa-..."
-      }
+      "env": { "VOYAGE_API_KEY": "pa-..." }
     }
   }
 }
